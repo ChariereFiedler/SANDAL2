@@ -1,6 +1,7 @@
 #include "Element.h"
 
 #include <limits.h>
+#include <math.h>
 
 /* -------------------------------------------------------
  * Other functions
@@ -10,6 +11,44 @@ static void copyColor(int to[4],int from[4]){
     to[1]=from[1];
     to[2]=from[2];
     to[3]=from[3];
+}
+
+// rotate (*px1, *py1) around (x2, y2) with a specific angle
+static int rotateDot(float * px1, float * py1, float x2, float y2, float angle){
+    int error = 1;
+    float x1, y1;
+    float s, c; // sin and cos
+    float tmpX, tmpY;
+
+    if(px1 && py1){
+	error = 0;
+
+	// saving data in another variable for readability
+	x1 = *px1;
+	y1 = *py1;
+
+	// calculating angle
+	s = sinf(angle);
+	c = cosf(angle);
+
+	// translate point back to origin
+	x1 -= x2;
+	y1 -= y2;
+
+	// rotate point
+	tmpX = x1 * c - y1 * s;
+	tmpY = x1 * s + y1 * c;
+
+	// translate point back to its starting center
+	x1 = tmpX + x2;
+	y1 = tmpY + y2;
+	
+	// saving the result
+	*px1 = x1;
+	*py1 = y1;
+    }
+
+    return error;
 }
 /* ------------------------------------------------------- */
 
