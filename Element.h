@@ -10,6 +10,7 @@ extern "C" {
 #include "Window.h"
 #include "DisplayCode.h"
 #include "Sprite.h"
+#include <List.h>
 
 #define SANDAL2_FLIP_HOR SDL_FLIP_HORIZONTAL
 #define SANDAL2_FLIP_VER SDL_FLIP_VERTICAL
@@ -86,46 +87,65 @@ typedef struct Element{
     /**< width of the element*/
     float height;
     /**< height of the element*/
+    
     float prX;
     /**< abscissa coordinate of the rotation point (if from 0 to 1, in the element)*/
     float prY;
     /**< ordinate coordinate of the rotation point (if from 0 to 1, in the element)*/
+    float currPrX;
+    /**< current value of prX (depending of parent element) */
+    float currPrY;
+    /**< current value of prY (depending of parent element) */
     float rotation;
     /**< rotation angle of the element*/
     float rotSpeed;
     /**< speed rotation (degree / update) of the element*/
     SANDAL2_FLIP flip;
     /**< tells whether or not the element should be flipped, can be SANDAL2_FLIP_VER, SANDAL2_FLIP_HOR, SANDAL2_FLIP_NONE or a combinaison of those  */
+    list_t children;
+    /**< list of all children of this element in the scenary graph */
+    
     int coulBlock[4];
     /**< color of the block of the element (if first value -1, there is no block)*/
     float textSize;
     /**< text proportion in the block*/
+    
     ListDisplayCode *codes;
     /**< list of display code of the element*/
+    
     EventElement events;
     /**< behavior of the element to  events*/
+    
     SDL_Texture * image;
     /**< texture of the image (NULL if no image)*/
     ListAnimation * animation;
     /**< animation of the image*/
+    
     Font *font;
     /**< informations about the text (NULL if no text)*/
+    
     Entry *entry;
     /**< informations about the entry (NULL if no entry)*/
+    
     struct ListPtrElement *interactions;
     /**< list of elements that this element can modifie*/
+    
     ListClickable * hitboxes;
     /**< list of clickable zones*/
+    
     void * data;
     /**< data available for the user*/
     void (*freeData)(void*);
     /**< function to be called to free the data */
+    
     int deleted;
     /**< tells whether or not the element should be deleted (1 for completely deleted, 2 for display remove, 3 for plan change)*/
     int deleteCode;
     /**< plan or display code to be removed from*/
+    
     int selected;
     /**< tells whether or not the element is selected*/
+    
     Window * parent;
     /**< parent window of the element */
 }Element;

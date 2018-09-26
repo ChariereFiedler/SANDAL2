@@ -147,47 +147,6 @@ static void freeListDCElement(ListDCElement* l){
 	free(l);
     }
 }
-
-/*static int delDCElement(ListDCElement** l,Element *e){
-    ListPtrElement **lp;
-    PtrElement **pe, *etmp, **pte;
-    int error = 1;
-  
-    if(e && l){
-        error = 0;
-        while(*l){
-            lp=&((*l)->first);
-            while(*lp){
-                pte=NULL;
-                pe=&((*lp)->first);
-                while(*pe){
-                    if((*pe)->element==e){
-                        if(*pe==(*lp)->last){
-                            if(pte){
-                                (*lp)->last=*pte;
-                            }else{
-                                (*lp)->last=NULL;
-                            }
-                        }
-                        if(*pe==(*lp)->current){
-                            (*lp)->current=(*pe)->next;
-                        }
-                        etmp=(*pe)->next;
-                        free(*pe);
-                        *pe=etmp;
-                    }else{
-                        pte=pe;
-                        pe=&((*pe)->next);
-                    }
-                }
-                lp=&((*lp)->next);
-            }
-            l=&((*l)->next);
-        }
-    }
-
-    return error;
-}*/
 /* ------------------------------------------------------- */
 
 
@@ -369,6 +328,7 @@ int delElement(Element *e){
  */
 void _freeElement(Element *e){
     if(e){
+	deleteList(e->children);
         if(e->codes){
             freeListDisplayCode(e->codes);
         }
@@ -415,6 +375,7 @@ Element* createBlock(float x,float y,float width,float height,int couleur[4],int
             e->rotation=0.f;
             e->rotSpeed=0.f;
 	    e->flip = SANDAL2_FLIP_NONE;
+	    e->children = newList();
             copyColor(e->coulBlock,couleur);
             e->codes=initListDisplayCode();
             addDisplayCode(e->codes,displayCode,1,plan);

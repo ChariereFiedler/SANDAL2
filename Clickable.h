@@ -5,7 +5,6 @@
 extern "C" {
 #endif
     
-#include <math.h>
 #include <stdlib.h>
 
 /**

@@ -1,5 +1,5 @@
 #include "Clickable.h"
-
+#include <math.h>
 
 /* ----------------------------------------------------------
  * Clickables

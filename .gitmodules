@@ -1,0 +1,3 @@
+[submodule "PAIC"]
+	path = PAIC
+	url = git@github.com:Klevh/PAIC.git
