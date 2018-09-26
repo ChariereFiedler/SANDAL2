@@ -891,7 +891,6 @@ unsigned long keyReleasedAllWindow(char c){
 unsigned long wheelWindow(int y)
 {
   unsigned long error = 1;
-  Window * w;
   
   if(_windows_SANDAL2 && _windows_SANDAL2->current){
     error = 0;
