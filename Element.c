@@ -12,44 +12,6 @@ static void copyColor(int to[4],int from[4]){
     to[2]=from[2];
     to[3]=from[3];
 }
-
-// rotate (*px1, *py1) around (x2, y2) with a specific angle
-static int rotateDot(float * px1, float * py1, float x2, float y2, float angle){
-    int error = 1;
-    float x1, y1;
-    float s, c; // sin and cos
-    float tmpX, tmpY;
-
-    if(px1 && py1){
-	error = 0;
-
-	// saving data in another variable for readability
-	x1 = *px1;
-	y1 = *py1;
-
-	// calculating angle
-	s = sinf(angle);
-	c = cosf(angle);
-
-	// translate point back to origin
-	x1 -= x2;
-	y1 -= y2;
-
-	// rotate point
-	tmpX = x1 * c - y1 * s;
-	tmpY = x1 * s + y1 * c;
-
-	// translate point back to its starting center
-	x1 = tmpX + x2;
-	y1 = tmpY + y2;
-	
-	// saving the result
-	*px1 = x1;
-	*py1 = y1;
-    }
-
-    return error;
-}
 /* ------------------------------------------------------- */
 
 
@@ -366,16 +328,17 @@ Element* createBlock(float x,float y,float width,float height,int couleur[4],int
             e->deleted=0;
             e->deleteCode=0;
             e->selected=0;
-            e->x=x;
-            e->y=y;
-            e->width=width;
-            e->height=height;
-            e->prX=.5f;
-            e->prY=.5f;
-            e->rotation=0.f;
-            e->rotSpeed=0.f;
-	    e->flip = SANDAL2_FLIP_NONE;
+            e->coordinates.x=x;
+            e->coordinates.y=y;
+            e->coordinates.width=width;
+            e->coordinates.height=height;
+            e->coordinates.prX=.5f;
+            e->coordinates.prY=.5f;
+            e->coordinates.rotation=0.f;
+            e->coordinates.rotSpeed=0.f;
+	    e->coordinates.flip = SANDAL2_FLIP_NONE;
 	    e->children = newList();
+	    e->parentElement = NULL;
             copyColor(e->coulBlock,couleur);
             e->codes=initListDisplayCode();
             addDisplayCode(e->codes,displayCode,1,plan);
@@ -415,15 +378,17 @@ Element* createText(float x,float y,float width,float height,float textSize, con
             e->deleted=0;
             e->deleteCode=0;
             e->selected=0;
-            e->x=x;
-            e->y=y;
-            e->width=width;
-            e->height=height;
-            e->prX=.5f;
-            e->prY=.5f;
-            e->rotation=0.f;
-            e->rotSpeed=0.f;
-	    e->flip = SANDAL2_FLIP_NONE;
+            e->coordinates.x=x;
+            e->coordinates.y=y;
+            e->coordinates.width=width;
+            e->coordinates.height=height;
+            e->coordinates.prX=.5f;
+            e->coordinates.prY=.5f;
+            e->coordinates.rotation=0.f;
+            e->coordinates.rotSpeed=0.f;
+	    e->coordinates.flip = SANDAL2_FLIP_NONE;
+	    e->children = newList();
+	    e->parentElement = NULL;
             e->textSize=textSize/100.f;
             e->animation=initListAnimation();
             e->image=NULL;
@@ -474,15 +439,17 @@ Element* createImage(float x,float y,float width,float height,const char *image,
                 e->deleted=0;
                 e->deleteCode=0;
                 e->selected=0;
-                e->x=x;
-                e->y=y;
-                e->width=width;
-                e->height=height;
-                e->prX=.5f;
-                e->prY=.5f;
-                e->rotation=0.f;
-                e->rotSpeed=0.f;
-		e->flip = SANDAL2_FLIP_NONE;
+                e->coordinates.x=x;
+                e->coordinates.y=y;
+                e->coordinates.width=width;
+                e->coordinates.height=height;
+                e->coordinates.prX=.5f;
+                e->coordinates.prY=.5f;
+                e->coordinates.rotation=0.f;
+                e->coordinates.rotSpeed=0.f;
+		e->coordinates.flip = SANDAL2_FLIP_NONE;
+		e->children = newList();
+		e->parentElement = NULL;
                 e->animation=initListAnimation();
                 e->image=SDL_CreateTextureFromSurface(_windows_SANDAL2->current->renderer,s);
                 e->codes=initListDisplayCode();
@@ -683,7 +650,7 @@ int clearDisplayCode(int code){
 
 int getFlipStateElement(Element * e,SANDAL2_FLIP * flip){
     if(e && flip)
-	*flip = e->flip;
+	*flip = e->coordinates.flip;
 
     return !e;
 }
@@ -693,10 +660,10 @@ int getCoordElement(Element* e,float* x,float* y){
 
     if(e){
         if(x){
-            *x=e->x;
+            *x=e->coordinates.x;
         }
         if(y){
-            *y=e->y;
+            *y=e->coordinates.y;
         }
         error = 0;
     }
@@ -709,7 +676,7 @@ int getAngleElement(Element* e,float* a){
 
     if(e){
         if(a){
-            *a=e->rotation;
+            *a=e->coordinates.rotation;
         }
         error=0;
     }
@@ -722,10 +689,10 @@ int getDimensionElement(Element* e,float* w,float * h){
 
     if(e){
         if(w){
-            *w=e->width;
+            *w=e->coordinates.width;
         }
         if(h){
-            *h=e->height;
+            *h=e->coordinates.height;
         }
         error=0;
     }
@@ -738,10 +705,10 @@ int getRotationPointElement(Element* e,float *x,float *y){
 
     if(e){
         if(x){
-            *x=e->prX;
+            *x=e->coordinates.prX;
         }
         if(y){
-            *y=e->prY;
+            *y=e->coordinates.prY;
         }
         error = 0;
     }
@@ -754,7 +721,7 @@ int getRotationSpeedElement(Element* e,float* s){
 
     if(e){
         if(s){
-            *s=e->rotSpeed;
+            *s=e->coordinates.rotSpeed;
         }
         error = 0;
     }
@@ -839,7 +806,7 @@ int getWidthElement(Element * e,float * w){
 
     if(e && w){
 	error = 0;
-	*w = e->width;
+	*w = e->coordinates.width;
     }
 
     return error;
@@ -850,7 +817,7 @@ int getHeightElement(Element * e,float * h){
 
     if(e && h){
 	error = 0;
-	*h = e->height;
+	*h = e->coordinates.height;
     }
 
     return error;
@@ -861,7 +828,7 @@ int getCoordXElement(Element * e,float * x){
 
     if(e && x){
 	error = 0;
-	*x = e->x;
+	*x = e->coordinates.x;
     }
 
     return error;
@@ -872,7 +839,7 @@ int getCoordYElement(Element * e,float * y){
 
     if(e && y){
 	error = 0;
-	*y = e->y;
+	*y = e->coordinates.y;
     }
 
     return error;
@@ -1015,8 +982,8 @@ int replaceElement(Element *e,float x,float y){
     int error = 1;
 
     if(e && _windows_SANDAL2 && _windows_SANDAL2->current){
-        e->x=x;
-        e->y=y;
+        e->coordinates.x=x;
+        e->coordinates.y=y;
         error = 0;
     }
 
@@ -1027,8 +994,8 @@ int moveElement(Element *e,float x,float y){
     int error = 1;
 
     if(e && _windows_SANDAL2 && _windows_SANDAL2->current){
-        e->x+=x;
-        e->y+=y;
+        e->coordinates.x+=x;
+        e->coordinates.y+=y;
         error = 0;
     }
 
@@ -1039,8 +1006,8 @@ int setDimensionElement(Element *e,float width,float height){
     int error = 1;
 
     if(e){
-        e->width=width;
-        e->height=height;
+        e->coordinates.width=width;
+        e->coordinates.height=height;
         error = 0;
     }
 
@@ -1473,7 +1440,7 @@ int addRotationSpeedElement(Element *e,float s){
     int error = 1;
 
     if(e && e->coulBlock[0]==-1){
-        e->rotSpeed+=s;
+        e->coordinates.rotSpeed+=s;
         error = 0;
     }
 
@@ -1484,7 +1451,7 @@ int setRotationSpeedElement(Element *e,float s){
     int error = 1;
 
     if(e && e->coulBlock[0]==-1){
-        e->rotSpeed=s;
+        e->coordinates.rotSpeed=s;
         error = 0;
     }
 
@@ -1495,7 +1462,7 @@ int addAngleElement(Element *e,float a){
     int error = 1;
 
     if(e && e->coulBlock[0]==-1){
-        e->rotation+=a;
+        e->coordinates.rotation+=a;
         error = 0;
     }
 
@@ -1506,7 +1473,7 @@ int setAngleElement(Element *e,float a){
     int error = 1;
 
     if(e && e->coulBlock[0]==-1){
-        e->rotation=a;
+        e->coordinates.rotation=a;
         error = 0;
     }
 
@@ -1517,8 +1484,8 @@ int setRotationPointElement(Element *e,float x,float y){
     int error = 1;
 
     if(e && e->coulBlock[0]==-1){
-        e->prX=x;
-        e->prY=y;
+        e->coordinates.prX=x;
+        e->coordinates.prY=y;
         error = 0;
     }
 
@@ -1719,35 +1686,35 @@ int clearWindow(void){
 
 int setFlipStateElement(Element * e, SANDAL2_FLIP flip){
     if(e)
-	e->flip = flip;
+	e->coordinates.flip = flip;
 
     return !e;
 }
 
 int setWidthElement(Element * e, float width){
     if(e)
-	e->width = width;
+	e->coordinates.width = width;
 
     return !e;
 }
 
 int setHeightElement(Element * e, float height){
     if(e)
-	e->height = height;
+	e->coordinates.height = height;
 
     return !e;
 }
 
 int setCoordXElement(Element * e, float x){
     if(e)
-	e->x = x;
+	e->coordinates.x = x;
 
     return !e;
 }
 
 int setCoordYElement(Element * e, float y){
     if(e)
-	e->y = y;
+	e->coordinates.y = y;
 
     return !e;
 }
@@ -1904,6 +1871,51 @@ int delCharEntry(Element *e){
 	    e->font->text[e->entry->size_max*2 - e->entry->size] = ' ';
         e->font->text[e->entry->size]=' ';
         error=actualizeTextFont(e->font,e->entry->isScripted);
+    }
+
+    return error;
+}
+
+int addChildren(Element * parent, Element * child){
+    int error = 1;
+    Element * tmp = NULL;
+    unsigned long i = -1;
+
+    if(parent && child && (pushBackList(parent->children, child))){
+	error = 0;
+
+	// removing the child to its old parent (if any)
+	if(child->parentElement && !(initIteratorFrontList(child->parentElement->children))){
+	    while((tmp = nextIteratorList(child->parentElement->children, NULL)) && tmp != child){
+		++i;
+	    }
+	    if(tmp == child){
+		popList(child->parentElement->children, i);
+	    }
+	}
+	child->parentElement = parent;
+    }
+
+    return error;
+}
+
+int detachChildren(Element * child){
+    int error = 1;
+    Element * tmp = NULL;
+    unsigned long i = -1;
+
+    if(child && child->parentElement){
+	error = 0;
+
+	if(!(initIteratorFrontList(child->parentElement->children))){
+	    while((tmp = nextIteratorList(child->parentElement->children, NULL)) && tmp != child){
+		++i;
+	    }
+	    if(tmp == child){
+		popList(child->parentElement->children, i);
+	    }
+	}
+	child->parentElement = NULL;
     }
 
     return error;

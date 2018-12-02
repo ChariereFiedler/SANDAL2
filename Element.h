@@ -75,10 +75,10 @@ typedef struct{
 }EventElement;
 
 /**
- * @struct Element
- * @brief All the informations of an element
+ * @struct ElementCoordinates
+ * @brief all informations about an element coordinate, dimensions and rotation
  */
-typedef struct Element{
+typedef struct{
     float x;
     /**< abscissa coordinate of the top left of the element*/
     float y;
@@ -92,18 +92,25 @@ typedef struct Element{
     /**< abscissa coordinate of the rotation point (if from 0 to 1, in the element)*/
     float prY;
     /**< ordinate coordinate of the rotation point (if from 0 to 1, in the element)*/
-    float currPrX;
-    /**< current value of prX (depending of parent element) */
-    float currPrY;
-    /**< current value of prY (depending of parent element) */
     float rotation;
     /**< rotation angle of the element*/
     float rotSpeed;
     /**< speed rotation (degree / update) of the element*/
     SANDAL2_FLIP flip;
     /**< tells whether or not the element should be flipped, can be SANDAL2_FLIP_VER, SANDAL2_FLIP_HOR, SANDAL2_FLIP_NONE or a combinaison of those  */
+}ElementCoordinates;
+
+/**
+ * @struct Element
+ * @brief All the informations of an element
+ */
+typedef struct Element{
+    ElementCoordinates coordinates;
+    /**< All informations about the coordinate, the dimension and the rotation of an element */
     list_t children;
     /**< list of all children of this element in the scenary graph */
+    struct Element * parentElement;
+    /**< parent element in the scenary graph */
     
     int coulBlock[4];
     /**< color of the block of the element (if first value -1, there is no block)*/
@@ -940,6 +947,19 @@ int addCharEntry(Element *e,char c);
  * @return 0 if it was possible, 1 if not
  */
 int delCharEntry(Element *e);
+/**
+ * @brief add 'child' element to 'parent' as its child in the scenery graph, if the 'child' already had a parent, the new parent replace the old one
+ * @param parent : parent element
+ * @param child : child element
+ * @return 0 if it was possible, 1 if not
+ */
+int addChildren(Element * parent, Element * child);
+/**
+ * @brief detach a child from its parent in the scenery graph
+ * @param child : child element to be detached
+ * @return 0 if it was possible, 1 if not
+ */
+int detachChildren(Element * child);
 /* ------------------------------------------------------- */
 
 #ifdef __cplusplus

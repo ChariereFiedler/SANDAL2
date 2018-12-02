@@ -1,4 +1,8 @@
 #include "SANDAL2.h"
+#include <Vector.h>
+#include <Deque.h>
+
+
 /* -------------------------------------------------------
  * Other functions
  */
@@ -18,6 +22,44 @@ static void copyColor(int to[4],int from[4]){
     to[1]=from[1];
     to[2]=from[2];
     to[3]=from[3];
+}
+
+// rotate (*px1, *py1) around (x2, y2) with a specific angle
+static int rotateDot(float * px1, float * py1, float x2, float y2, float angle){
+    int error = 1;
+    float x1, y1;
+    float s, c; // sin and cos
+    float tmpX, tmpY;
+
+    if(px1 && py1){
+	error = 0;
+
+	// saving data in another variable for readability
+	x1 = *px1;
+	y1 = *py1;
+
+	// calculating angle
+	s = sinf(angle);
+	c = cosf(angle);
+
+	// translate point back to origin
+	x1 -= x2;
+	y1 -= y2;
+
+	// rotate point
+	tmpX = x1 * c - y1 * s;
+	tmpY = x1 * s + y1 * c;
+
+	// translate point back to its starting center
+	x1 = tmpX + x2;
+	y1 = tmpY + y2;
+	
+	// saving the result
+	*px1 = x1;
+	*py1 = y1;
+    }
+
+    return error;
 }
 /* ------------------------------------------------------- */
 
@@ -325,8 +367,8 @@ int updateWindow(){
                                 (*ele)->element->animation->current->wasChanged = 0;
                             }
                         }
-                        if((*ele)->element->rotSpeed != 0.f){
-                            (*ele)->element->rotation = ((*ele)->element->rotation + (*ele)->element->rotSpeed > 360.f ? (*ele)->element->rotation + (*ele)->element->rotSpeed - 360.f : (*ele)->element->rotation + (*ele)->element->rotSpeed);
+                        if((*ele)->element->coordinates.rotSpeed != 0.f){
+                            (*ele)->element->coordinates.rotation = ((*ele)->element->coordinates.rotation + (*ele)->element->coordinates.rotSpeed > 360.f ? (*ele)->element->coordinates.rotation + (*ele)->element->coordinates.rotSpeed - 360.f : (*ele)->element->coordinates.rotation + (*ele)->element->coordinates.rotSpeed);
                         }
                     }
 		    if(_windows_SANDAL2->current->stop)
@@ -359,8 +401,11 @@ int displayWindow(){
     int coul[4];
     SDL_Point p;
     int error = 1;
+    vector_t lists = newVector();
+    deque_t rotationInfos = newDeque();
+    Element * e;
 
-    if(_windows_SANDAL2 && _windows_SANDAL2->current && _windows_SANDAL2->current->liste){
+    if(_windows_SANDAL2 && _windows_SANDAL2->current && _windows_SANDAL2->current->liste && lists && rotationInfos){
         error=0;
         /* fond de la fenetre */
         copyColor(coul,_windows_SANDAL2->current->background);
@@ -374,11 +419,11 @@ int displayWindow(){
                 /* affichage des elements */
                 ele=lp->first;
                 while(ele){
-                    if(isDisplaiedElement(ele->element)){
-                        r.x=(ele->element->x - _windows_SANDAL2->current->origin[0])*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth;
-                        r.y=(ele->element->y - _windows_SANDAL2->current->origin[1])*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight;
-                        r.w=ele->element->width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth;
-                        r.h=ele->element->height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight;
+                    if(isDisplaiedElement(ele->element) && !ele->element->parentElement){
+                        r.x=(ele->element->coordinates.x - _windows_SANDAL2->current->origin[0])*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth;
+                        r.y=(ele->element->coordinates.y - _windows_SANDAL2->current->origin[1])*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight;
+                        r.w=ele->element->coordinates.width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth;
+                        r.h=ele->element->coordinates.height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight;
                         /* affichage du block */
                         if(ele->element->coulBlock[0]!=-1 && !ele->element->image){
                             if(!cmpCoul(coul,ele->element->coulBlock)){
@@ -397,12 +442,12 @@ int displayWindow(){
                             }else{
                                 srect=NULL;
                             }
-                            if(ele->element->rotation == 0.f && ele->element->flip == SANDAL2_FLIP_NONE){
+                            if(ele->element->coordinates.rotation == 0.f && ele->element->coordinates.flip == SANDAL2_FLIP_NONE){
                                 SDL_RenderCopy(_windows_SANDAL2->current->renderer,ele->element->image,srect,&r);
                             }else{
-                                p.x=(int)(ele->element->prX*ele->element->width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth);
-                                p.y=(int)(ele->element->prY*ele->element->height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight);
-                                SDL_RenderCopyEx(_windows_SANDAL2->current->renderer,ele->element->image,srect,&r,(double)ele->element->rotation,&p,ele->element->flip);
+                                p.x=(int)(ele->element->coordinates.prX*ele->element->coordinates.width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth);
+                                p.y=(int)(ele->element->coordinates.prY*ele->element->coordinates.height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight);
+                                SDL_RenderCopyEx(_windows_SANDAL2->current->renderer,ele->element->image,srect,&r,(double)ele->element->coordinates.rotation,&p,ele->element->coordinates.flip);
                             }
                         }
                         /* affichage du texte */
@@ -411,14 +456,53 @@ int displayWindow(){
                             r.y+=r.h*(1.0-ele->element->textSize)/2;
                             r.w*=ele->element->textSize;
                             r.h*=ele->element->textSize;
-                            if(ele->element->rotation == 0.f || (ele->element->coulBlock[0]!=-1 && !ele->element->image)){
+                            if(ele->element->coordinates.rotation == 0.f || (ele->element->coulBlock[0]!=-1 && !ele->element->image)){
                                 SDL_RenderCopy(_windows_SANDAL2->current->renderer,ele->element->font->texture,NULL,&r);
                             }else{
-                                p.x=(int)(ele->element->textSize*ele->element->prX*ele->element->width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth);
-                                p.y=(int)(ele->element->textSize*ele->element->prY*ele->element->height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight);
-                                SDL_RenderCopyEx(_windows_SANDAL2->current->renderer,ele->element->font->texture,NULL,&r,(double)ele->element->rotation,&p,SDL_FLIP_NONE);
+                                p.x=(int)(ele->element->textSize*ele->element->coordinates.prX*ele->element->coordinates.width*_windows_SANDAL2->current->width/_windows_SANDAL2->current->initWidth);
+                                p.y=(int)(ele->element->textSize*ele->element->coordinates.prY*ele->element->coordinates.height*_windows_SANDAL2->current->height/_windows_SANDAL2->current->initHeight);
+                                SDL_RenderCopyEx(_windows_SANDAL2->current->renderer,ele->element->font->texture,NULL,&r,(double)ele->element->coordinates.rotation,&p,SDL_FLIP_NONE);
                             }
                         }
+
+			/*
+			  TODO :
+			  Displaying all children of this element
+			  using scenary graph properties
+			 */
+			/* displaying all children of this element */
+			if(!initIteratorList(ele->element->children)){
+			    e = nextIteratorList(ele->element->children);
+			    id = 0;
+			    /* adding children list to vector of lists */
+			    pushBackVector(lists, ele->element->children);
+
+			    /* adding rotation informations */
+			    /*    rotation point */
+			    pushBackDeque(rotationInfos, ele->element->coordinates.prX);
+			    pushBackDeque(rotationInfos, ele->element->coordinates.prY);
+			    /*    cos and sin of rotation angle */
+			    pushBackDeque(rotationInfos, cosf(ele->element->coordinates.rotation));
+			    pushBackDeque(rotationInfos, sinf(ele->element->coordinates.rotation));
+			    while(e){
+				while(e){
+				    /*
+				      TODO
+				      Display element using all preceding
+				      rotation infos
+				    */
+				    /*
+				      TODO
+				      add children list and e rotation infos
+				      go to next children
+				    */
+				}
+				/*
+				  TODO
+				  go back to previous children list
+				 */
+			    }
+			}
                     }
                     ele=ele->next;
                 }
@@ -427,6 +511,9 @@ int displayWindow(){
         }
         SDL_RenderPresent(_windows_SANDAL2->current->renderer);
     }
+    
+    deleteVector(lists);
+    deleteDeque(rotationInfos);
 
     return error;
 }
@@ -457,20 +544,20 @@ int clickWindow(SDL_MouseButtonEvent button){
                     if(isDisplaiedElement(e->element)){
                         newX=x*_windows_SANDAL2->current->initWidth/_windows_SANDAL2->current->width + _windows_SANDAL2->current->origin[0];
                         newY=y*_windows_SANDAL2->current->initHeight/_windows_SANDAL2->current->height + _windows_SANDAL2->current->origin[1];
-                        if(e->element->rotation != 0.f && e->element->coulBlock[0]==-1){
-                            if(e->element->rotation != rot){
-                                c=cosf(-M_PI*e->element->rotation/180.f);
-                                s=sinf(-M_PI*e->element->rotation/180.f);
-                                rot=e->element->rotation;
+                        if(e->element->coordinates.rotation != 0.f && e->element->coulBlock[0]==-1){
+                            if(e->element->coordinates.rotation != rot){
+                                c=cosf(-M_PI*e->element->coordinates.rotation/180.f);
+                                s=sinf(-M_PI*e->element->coordinates.rotation/180.f);
+                                rot=e->element->coordinates.rotation;
                             }
-                            prX=e->element->prX*e->element->width+e->element->x;
-                            prY=e->element->prY*e->element->height+e->element->y;
+                            prX=e->element->coordinates.prX*e->element->coordinates.width+e->element->coordinates.x;
+                            prY=e->element->coordinates.prY*e->element->coordinates.height+e->element->coordinates.y;
                             xtmp=prX+(newX-prX)*c-(newY-prY)*s;
                             newY=prY+(newX-prX)*s+(newY-prY)*c;
                             newX=xtmp;
                         }
-                        newX=(newX-e->element->x)/(e->element->width);
-                        newY=(newY-e->element->y)/(e->element->height);
+                        newX=(newX-e->element->coordinates.x)/(e->element->coordinates.width);
+                        newY=(newY-e->element->coordinates.y)/(e->element->coordinates.height);
                         if(hitListClickable(e->element->hitboxes,newX,newY)){
                             e->element->selected=1;
                             if(e->element->entry){
@@ -531,20 +618,20 @@ int onMouseMotion(int x, int y){
                     if(isDisplaiedElement(e->element)){
                         newX=x*_windows_SANDAL2->current->initWidth/_windows_SANDAL2->current->width + _windows_SANDAL2->current->origin[0];
                         newY=y*_windows_SANDAL2->current->initHeight/_windows_SANDAL2->current->height + _windows_SANDAL2->current->origin[1];
-                        if(e->element->rotation != 0.f && e->element->coulBlock[0]==-1){
-                            if(e->element->rotation != rot){
-                                c=cosf(-M_PI*e->element->rotation/180.f);
-                                s=sinf(-M_PI*e->element->rotation/180.f);
-                                rot=e->element->rotation;
+                        if(e->element->coordinates.rotation != 0.f && e->element->coulBlock[0]==-1){
+                            if(e->element->coordinates.rotation != rot){
+                                c=cosf(-M_PI*e->element->coordinates.rotation/180.f);
+                                s=sinf(-M_PI*e->element->coordinates.rotation/180.f);
+                                rot=e->element->coordinates.rotation;
                             }
-                            prX=e->element->prX*e->element->width+e->element->x;
-                            prY=e->element->prY*e->element->height+e->element->y;
+                            prX=e->element->coordinates.prX*e->element->coordinates.width+e->element->coordinates.x;
+                            prY=e->element->coordinates.prY*e->element->coordinates.height+e->element->coordinates.y;
                             xtmp=prX+(newX-prX)*c-(newY-prY)*s;
                             newY=prY+(newX-prX)*s+(newY-prY)*c;
                             newX=xtmp;
                         }
-                        newX=(newX-e->element->x)/(e->element->width);
-                        newY=(newY-e->element->y)/(e->element->height);
+                        newX=(newX-e->element->coordinates.x)/(e->element->coordinates.width);
+                        newY=(newY-e->element->coordinates.y)/(e->element->coordinates.height);
                         if(hitListClickable(e->element->hitboxes,newX,newY)){
                             e->element->selected=1;
                             if(e->element->entry){
@@ -609,16 +696,16 @@ int unclickWindow(SDL_MouseButtonEvent button){
                 e=lp->first;
                 while(e && !_windows_SANDAL2->current->close){
                     if(isDisplaiedElement(e->element)){
-                        newX=(x*_windows_SANDAL2->current->initWidth/_windows_SANDAL2->current->width-e->element->x)/(e->element->width) + _windows_SANDAL2->current->origin[0];
-                        newY=(y*_windows_SANDAL2->current->initHeight/_windows_SANDAL2->current->height-e->element->y)/(e->element->height) + _windows_SANDAL2->current->origin[1];
-                        if(e->element->rotation != 0.f && e->element->coulBlock[0]==-1){
-                            if(e->element->rotation != rot){
-                                c=cosf(-M_PI*e->element->rotation/180);
-                                s=sinf(-M_PI*e->element->rotation/18);
-                                rot=e->element->rotation;
+                        newX=(x*_windows_SANDAL2->current->initWidth/_windows_SANDAL2->current->width-e->element->coordinates.x)/(e->element->coordinates.width) + _windows_SANDAL2->current->origin[0];
+                        newY=(y*_windows_SANDAL2->current->initHeight/_windows_SANDAL2->current->height-e->element->coordinates.y)/(e->element->coordinates.height) + _windows_SANDAL2->current->origin[1];
+                        if(e->element->coordinates.rotation != 0.f && e->element->coulBlock[0]==-1){
+                            if(e->element->coordinates.rotation != rot){
+                                c=cosf(-M_PI*e->element->coordinates.rotation/180);
+                                s=sinf(-M_PI*e->element->coordinates.rotation/18);
+                                rot=e->element->coordinates.rotation;
                             }
-                            xtmp=e->element->prX+(newX-e->element->prX)*c-(newY-e->element->prY)*s;
-                            newY=e->element->prY+(newX-e->element->prX)*s+(newY-e->element->prY)*c;
+                            xtmp=e->element->coordinates.prX+(newX-e->element->coordinates.prX)*c-(newY-e->element->coordinates.prY)*s;
+                            newY=e->element->coordinates.prY+(newX-e->element->coordinates.prX)*s+(newY-e->element->coordinates.prY)*c;
                             newX=xtmp;
                         }
                         if(hitListClickable(e->element->hitboxes,newX,newY)){
